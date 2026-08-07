@@ -4,7 +4,7 @@
 #
 # No drill coverage: this test asks the agent to *describe* SDD (string-
 # matches its verbal explanation against expected keywords like
-# "self-review", "skeptical", "worktree", "Step 1", "loop"). Drill scenarios
+# "self-review", "skeptical", "Step 1", "loop"). Drill scenarios
 # test behavior (real subagent dispatch, plan-following, review loops),
 # not description-recall. Kept by design.
 set -euo pipefail
@@ -150,12 +150,20 @@ fi
 
 echo ""
 
-# Test 8: Verify worktree requirement
-echo "Test 8: Worktree requirement..."
+# Test 8: Verify current-directory execution
+echo "Test 8: Current-directory execution..."
 
-output=$(run_claude "What workflow skills are required before using subagent-driven-development? List any prerequisites or required skills." "$CLAUDE_PROMPT_TIMEOUT")
+output=$(run_claude "Which workspace mode does subagent-driven-development use for implementation? Answer using exactly this structure:
+Working mode: <current working directory or isolated worktree>
+Creates or switches workspaces: <yes or no>" "$CLAUDE_PROMPT_TIMEOUT")
 
-if assert_contains "$output" "using-git-worktrees\|worktree" "Mentions worktree requirement"; then
+if assert_contains "$output" "Working mode:.*current working directory" "Uses current working directory"; then
+    : # pass
+else
+    exit 1
+fi
+
+if assert_contains "$output" "Creates or switches workspaces:.*no" "Does not create or switch workspaces"; then
     : # pass
 else
     exit 1
@@ -163,12 +171,19 @@ fi
 
 echo ""
 
-# Test 9: Verify main branch warning
-echo "Test 9: Main branch red flag..."
+# Test 9: Verify completion reports status without branch integration
+echo "Test 9: Completion reporting..."
 
-output=$(run_claude "In subagent-driven-development, is it okay to start implementation directly on the main branch?" "$CLAUDE_PROMPT_TIMEOUT")
+output=$(run_claude "After subagent-driven-development completes its final review, what does it do? Answer using exactly this structure:
+Reports verification and review status: <yes or no>
+Automatically merges: <yes or no>
+Automatically creates a pull request: <yes or no>
+Deletes branches or cleans worktrees: <yes or no>" "$CLAUDE_PROMPT_TIMEOUT")
 
-if assert_contains "$output" "worktree\|feature.*branch\|not.*main\|never.*main\|avoid.*main\|don't.*main\|consent\|permission" "Warns against main branch"; then
+if assert_contains "$output" "Reports verification and review status:.*yes" "Reports verification and review status" &&
+   assert_contains "$output" "Automatically merges:.*no" "Does not automatically merge" &&
+   assert_contains "$output" "Automatically creates a pull request:.*no" "Does not automatically create a pull request" &&
+   assert_contains "$output" "Deletes branches or cleans worktrees:.*no" "Does not delete branches or clean worktrees"; then
     : # pass
 else
     exit 1
