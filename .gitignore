@@ -13,3 +13,9 @@ triage/
 evals/
 .codegraph
 .cursor
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
